@@ -47,61 +47,70 @@
   </head>
   <body class="">
 <?php
-      
     require_once './utils/const.php';
     require_once './utils/utils.php';
 
     require './config/conexao.php';
-
-    $conexao = mysqli_connect(HOST, USER, PASSWORD, DBNAME) or die(mysqli_error());
+    $conexao = mysqli_connect(HOST, USER, PASSWORD, DBNAME) or die(mysql_error());
 
     mysqli_select_db($conexao, DBNAME) or die(mysqli_error());
 
     if (!$conexao) {
-        echo 'Error: Unable to connect to MySQL.'.PHP_EOL;
-        echo 'Debugging errno: '.mysqli_connect_errno().PHP_EOL;
-        echo 'Debugging error: '.mysqli_connect_error().PHP_EOL;
-        exit;
-    }
-
-    // echo 'Success: A proper connection to MySQL was made! The database is great.'.PHP_EOL;
-    // echo 'Host information: '.mysqli_get_host_info($conexao).PHP_EOL;
-
-    session_start();
-
-
-    if (!isset($_SESSION['email']) || !isset($_SESSION['senha'])) {
-        // session_start();
-        // session_destroy();
-        header('Location: login.php');
+        echo "Error: Unable to connect to MySQL." . PHP_EOL;
+        echo "Debugging errno: " . mysqli_connect_errno() . PHP_EOL;
+        echo "Debugging error: " . mysqli_connect_error() . PHP_EOL;
         exit;
     }
     
-    $termo = (isset($_POST['termo'])) ? $_POST['termo'] : '';
-
-    // Verifica se o termo de pesquisa está vazio, se estiver executa uma consulta completa
-    if (empty($termo)) {
-        $conexao = conexao::getInstance();
-        $sql = 'SELECT id, nome, email, celular, data_nascimento, status, foto FROM servidor';
-        $stm = $conexao->prepare($sql);
-        $stm->execute();
-        $clientes = $stm->fetchAll(PDO::FETCH_OBJ);
+    // echo "Success: A proper connection to MySQL was made! The database is great." . PHP_EOL;
+    // echo "Host information: " . mysqli_get_host_info($conexao) . PHP_EOL;
+    
+    // mysqli_close($conexao);
+    
+    session_start();
+    if (!isset($_SESSION["email"]) || !isset($_SESSION["senha"])) {
+        header("Location: index.php");
+        exit;
     } else {
-        // Executa uma consulta baseada no termo de pesquisa passado como parâmetro
-        $conexao = conexao::getInstance();
-        $sql = 'SELECT id, nome, email, celular, status, foto FROM servidor WHERE nome LIKE :nome OR email LIKE :email 
-        OR celular LIKE :celular';
-        $stm = $conexao->prepare($sql);
-        $stm->bindValue(':nome', $termo.'%');
-        $stm->bindValue(':email', $termo.'%');
-        $stm->bindValue(':celular', $termo.'%');
-        $stm->execute();
-        $clientes = $stm->fetchAll(PDO::FETCH_OBJ);
+        // echo "<center>Você está logado</center>";
     }
 
-    ?>
+    // Recebe o id do cliente do cliente via GET
+    if (isset($_GET['id'])) {
+        $id_cliente = (isset($_GET['id'])) ? $_GET['id'] : '';
+    }
 
-  <div class="page">
+    // Valida se existe um id e se ele é numérico
+    if (!empty($id_cliente) && is_numeric($id_cliente)) :
+
+        // Captura os dados do cliente solicitado
+        $conexao = conexao::getInstance();
+        $sql = 'SELECT id, nome, pai, mae, rua, numero, complemento, cep, bairro, cidade, email, cpf, identidade, titulo, zona, secao, pis, 
+        carteiratrabalho, reservista, escolar, instituicao, curso, deficiente, nota, cargo, funcao, forma_admissao, regime, setor, matricula,
+        data_nascimento, data_admissao, sexo, nacionalidade, naturalidade, estado, estado_civil, numero_dependente, telefone, celular, whatsapp,
+        banco, agencia, conta_corrente, status, foto, cnh, cnh_categoria, tipo_sangue, deficiente, deficiente_tipo FROM servidor WHERE id = :id';
+        $stm = $conexao->prepare($sql);
+        $stm->bindValue(':id', $id_cliente);
+        $stm->execute();
+
+        $cliente = $stm->fetch(PDO::FETCH_OBJ);
+
+        if (!empty($cliente)) :
+
+                // Formata a data no formato nacional
+        $array_data = explode('-', $cliente->data_nascimento);
+        $data_formatada = $array_data[2] . '/' . $array_data[1] . '/' . $array_data[0];
+
+                // Formata a data no formato Nacional
+        $array_data2 = explode('-', $cliente->data_admissao);
+        $data_formatada2 = $array_data2[2] . '/' . $array_data2[1] . '/' . $array_data2[0];
+
+        endif;
+        // var_dump($cliente);
+
+    endif;
+    ?>
+    <div class="page">
       <div class="page-main">
         <div class="header py-4">
           <div class="container">
@@ -177,143 +186,111 @@
             </div>
           </div>
         </div>
-
-        <?php $HeaderContext = 'Servidores'; ?>
-
+        <?php $HeaderContext = 'Servidores - Perfil'; ?>
         <?php include_once("./partials/nav.php"); ?>
+        
         <div class="my-3 my-md-5">
           <div class="container">
-              <div class="page-header">
-                <h1 class="page-title">
-                <?php echo $HeaderContext ?>
-                </h1>
-            </div>
+            
+            <?php if (empty($cliente)) : ?>
+              <h3 class="text-center text-danger">Cliente não encontrado!</h3>
+            
+            <?php else : ?>
 
-
-            <div class="row row-cards row-deck">
-              
-              <div class="col-md-6 col-lg-12">
-                <div class="row">
-              <div class="col-sm-6 col-lg-3">
-                <div class="card p-3">
-                  <div class="d-flex align-items-center">
-                    <span class="stamp stamp-md bg-blue mr-3">
-                      <i class="fe fe-user"></i>
-                    </span>
-                    <div>
-                      <h4 class="m-0"><a href="javascript:void(0)">132 <small>Total</small></a></h4>
-                      <small class="text-muted">12 servidores</small>
+            <div class="row">
+              <div class="col-lg-4">
+                <div class="card card-profile">
+                  <div class="card-header" style="background-image: url(./fotos/<?php echo verificaFoto($conexao, $cliente->id); ?>);"></div>
+                  <div class="card-body text-center">
+                    <img class="card-profile-img" src='./fotos/<?php echo verificaFoto($conexao, $cliente->id); ?>'>
+                    <!-- <img class="card-profile-img" src="demo/faces/male/16.jpg"> -->
+                    <h3 class="mb-3"><?php echo $cliente->nome; ?></h3>
+                    <p class="mb-4">
+                      <?php echo $cliente->email; ?>, matrícula <?php echo $cliente->matricula;?>. <?='<br>';?> Tipo Sanguíneo <?php echo $cliente->tipo_sangue; ?>.
+                    </p>
+                    <button class="btn btn-outline-primary btn-sm">
+                      <span class="fa fa-twitter"></span> Follow
+                    </button>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-body">
+                    <div class="media">
+                      <span class="avatar avatar-xxl mr-5" style="background-image: url(demo/faces/male/21.jpg)"></span>
+                      <div class="media-body">
+                        <h4 class="m-0"><?php echo $cliente->nome; ?></h4>
+                        <p class="text-muted mb-0"><?= $cliente->cargo ?></p>
+                        <ul class="social-links list-inline mb-0 mt-2">
+                          <li class="list-inline-item">
+                            <a href="javascript:void(0)" title="Facebook" data-toggle="tooltip"><i class="fa fa-facebook"></i></a>
+                          </li>
+                          <li class="list-inline-item">
+                            <a href="javascript:void(0)" title="<?= $cliente->whatsapp ?>" data-toggle="tooltip"><i class="fa fa-whatsapp"></i></a>
+                          </li>
+                          <li class="list-inline-item">
+                            <a href="javascript:void(0)" title="<?= $cliente->telefone ?>" data-toggle="tooltip"><i class="fa fa-phone"></i></a>
+                          </li>
+                          <li class="list-inline-item">
+                            <a href="javascript:void(0)" title="@skypename" data-toggle="tooltip"><i class="fa fa-skype"></i></a>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="col-sm-6 col-lg-3">
-                <div class="card p-3">
-                  <div class="d-flex align-items-center">
-                    <span class="stamp stamp-md bg-green mr-3">
-                      <i class="fe fe-user-check"></i>
-                    </span>
-                    <div>
-                      <h4 class="m-0"><a href="javascript:void(0)">78 <small>Efetivos</small></a></h4>
-                      <small class="text-muted">32 iniciais</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-6 col-lg-3">
-                <div class="card p-3">
-                  <div class="d-flex align-items-center">
-                    <span class="stamp stamp-md bg-red mr-3">
-                      <i class="fe fe-users"></i>
-                    </span>
-                    <div>
-                      <h4 class="m-0"><a href="javascript:void(0)">23 <small>Outros Orgãos</small></a></h4>
-                      <small class="text-muted">13 transferencias</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-6 col-lg-3">
-                <div class="card p-3">
-                  <div class="d-flex align-items-center">
-                    <span class="stamp stamp-md bg-yellow mr-3">
-                      <i class="fe fe-user-plus"></i>
-                    </span>
-                    <div>
-                      <h4 class="m-0"><a href="javascript:void(0)">30 <small>Comissionados</small></a></h4>
-                      <small class="text-muted">16 esperando</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-                </div>
-              </div>
-              <div class="col-12">
                 <div class="card">
                   <div class="card-header">
-                    <h3 class="card-title">Listagem</h3>
+                    <h3 class="card-title">My Profile</h3>
                   </div>
-                  <div class="table-responsive">
-                  <?php if (!empty($clientes)) {
-                      ?>
-
-                    <table class="table card-table table-vcenter text-nowrap">
-                      <thead>
-                        <tr>
-                          <th class="w-1">ID.</th>
-                          <th>Foto</th>
-                          <th>Nome</th>
-                          <th>E-mail</th>
-                          <th>Telefone(s)</th>
-                          <th>Admissão</th>
-                          <th>Setor</th>
-                          <th></th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <?php foreach ($clientes as $cliente) {
-                      ?>
-
-                        <tr>
-                          <td><span class="text-muted"><?php echo $cliente->id; ?></span></td>
-                          <td><img src='./fotos/<?php echo verificaFoto($conexao, $cliente->id); ?>' height='40' width='40'></a></td>
-                          <!-- <td><a href="invoice.html" class="text-inherit">Design Works</a></td> -->
-                          <td><?php echo $cliente->nome; ?></td>
-                          <td><?php echo $cliente->email; ?></td>
-                          <td><?php echo $cliente->celular; ?></td>
-                          <td>$887</td>
-                          <td><span class="status-icon bg-success"></span><?php echo $cliente->status; ?></td>
-                          <td class="text-right">
-                            <a href='profile.php?id=<?php echo $cliente->id; ?>' class="btn btn-secondary btn-sm">Gerenciar</a>
-                            <div class="dropdown">
-                              <button class="btn btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown">Ações</button>
-                            </div>
-                          </td>
-                          <td>
-                            <a class="icon" href="javascript:void(0)">
-                              <i class="fe fe-edit"></i>
-                            </a>
-                          </td>
-                        </tr>
-
-                      <?php } ?>
-
-                      </tbody>
-                    </table>
-                  <?php
-                    } else {
-                        ?>
-
-                            <h3 class="text-center text-primary">Não existem Funcionários cadastrados!</h3>
-                          <?php
-                    } ?>
-
+                  <div class="card-body">
+                    <form action="action_profile.php" method="post" id='form-contato' enctype='multipart/form-data'>
+                      <div class="row">
+                        <div class="col-auto">
+                          <span class="avatar avatar-xl" style="background-image: url(demo/faces/female/9.jpg)"></span>
+                        </div>
+                        <div class="col">
+                          <div class="form-group">
+                            <label class="form-label">Email-Address</label>
+                            <input class="form-control" placeholder="your-email@domain.com"/>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Bio</label>
+                        <textarea class="form-control" rows="5">Big belly rude boy, million dollar hustler. Unemployed.</textarea>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Email-Address</label>
+                        <input class="form-control" placeholder="your-email@domain.com"/>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" value="password"/>
+                      </div>
+                      <div class="form-footer">
+                        <button class="btn btn-primary btn-block">Save</button>
+                      </div>
+                    </form>
                   </div>
                 </div>
               </div>
+              <div class="col-lg-8">                
+                <form>
+                  <div  class="card">
+                  <?php include("profile-pessoal.php"); ?>                  
+                  </div>
+                  <div  class="card">
+                  <?php include("profile-cadastral.php"); ?>                  
+                  </div>
+                </form>
+              </div>
             </div>
+            <?php endif; ?>
+
           </div>
         </div>
       </div>
       <?php include("./partials/footer.php"); ?>
+    </div>
+  </body>
+</html>
